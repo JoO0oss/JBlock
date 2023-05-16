@@ -19,7 +19,11 @@ SPACE_WIDTH = 20
 SPACE_HEIGHT = 20
 SPACE_DEPTH = 20
 
-PLAYER_SPEED = 0.1
+GRAVITY = 5  # Blocks per second squared.
+
+PLAYER_ACCELERATION = 0.005
+PLAYER_DECELERATION = PLAYER_ACCELERATION / 2
+PLAYER_MAX_SPEED = 2
 PLAYER_LOOK_SENSITIVITY = 0.002
 
 world::Array{Block, 3} = fill(Block(block_type.Air), (SPACE_WIDTH, SPACE_HEIGHT, SPACE_DEPTH))
@@ -44,6 +48,23 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
     pz = 20.1  # Start the player a little bit back.
     θv = 0.0
     θh = 0.0
+
+    # Player width and height. (px, py, pz) refers to the bottom of the hitbox in the centre.
+    pw = 0.5
+    ph = 1.8
+    p_head = 1.7  # The height of the player's head.
+
+    vx = 0
+    vy = 0
+    vz = 0
+    is_vertically_supported = false
+    crawling = false
+
+    p_height_full = 1.8
+    p_height_crawl = 0.9
+    p_hd_full = 1.7  # The height of the player's head when standing.
+    p_hd_crawl = 0.8  # The height of the player's head when crawling.
+
 
     is_hovering = false
     selected_box = (0, 0, 0)  # The block that would be broken upon left click.
@@ -83,26 +104,35 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
             keyboard_update()
 
             if keyboard_read(KEYS_W)
-                pz -= PLAYER_SPEED * cos(θh)
-                px += PLAYER_SPEED * sin(θh)
+                vz -= PLAYER_ACCELERATION * cos(θh) * config.tps
+                vx += PLAYER_ACCELERATION * sin(θh) * config.tps
             end
             if keyboard_read(KEYS_S)
-                pz += PLAYER_SPEED * cos(θh)
-                px -= PLAYER_SPEED * sin(θh)
+                vz += PLAYER_ACCELERATION * cos(θh) * config.tps
+                vx -= PLAYER_ACCELERATION * sin(θh) * config.tps
             end
             if keyboard_read(KEYS_A)
-                pz -= PLAYER_SPEED * sin(θh)
-                px -= PLAYER_SPEED * cos(θh)
+                vz -= PLAYER_ACCELERATION * sin(θh) * config.tps
+                vx -= PLAYER_ACCELERATION * cos(θh) * config.tps
             end
             if keyboard_read(KEYS_D)
-                pz += PLAYER_SPEED * sin(θh)
-                px += PLAYER_SPEED * cos(θh)
+                vz += PLAYER_ACCELERATION * sin(θh) * config.tps
+                vx += PLAYER_ACCELERATION * cos(θh) * config.tps
             end
             if keyboard_read(KEYS_SPACE)
-                py += 0.1
+                if is_vertically_supported
+                    vy += 2
+                end
             end
+            
             if keyboard_read(KEYS_LSHIFT)
-                py -= 0.1
+                crawling = true
+                ph = p_height_crawl
+                p_head = p_hd_crawl
+            else
+                crawling = false
+                ph = p_height_full
+                p_head = p_hd_full
             end
 
             if keyboard_read(KEYS_F3)
@@ -113,10 +143,70 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                     for (key, value) in draw_get_dbg_info()
                         println("$key: $value")
                     end
+
+                    println("performance_count: $(SDL_GetPerformanceCounter())")
+                    println("x: $px")
+                    println("y: $py")
+                    println("z: $pz")
+                    println("vx: $vx")
+                    println("vy: $vy")
+                    println("vz: $vz")
+                    println("θv: $θv")
+                    println("θh: $θh")
+                    println("is_vertically_supported: $is_vertically_supported")
+                    println("crawling: $crawling")
+
                     println("==================\n")
                 end
                 dbg_key = false
             end
+
+            # Physics.
+            if !is_vertically_supported
+                vy -= GRAVITY / config.tps
+            end
+            if vx > PLAYER_MAX_SPEED
+                vx = PLAYER_MAX_SPEED
+            elseif vx < -PLAYER_MAX_SPEED
+                vx = -PLAYER_MAX_SPEED
+            end
+            if vz > PLAYER_MAX_SPEED
+                vz = PLAYER_MAX_SPEED
+            elseif vz < -PLAYER_MAX_SPEED
+                vz = -PLAYER_MAX_SPEED
+            end
+            if θv > π / 2
+                θv = π / 2
+            elseif θv < -π / 2
+                θv = -π / 2
+            end
+            if θh > 2π
+                θh -= 2π
+            end
+            if θh < 0
+                θh += 2π
+            end
+
+            if vx > 0
+                vx -= PLAYER_DECELERATION / config.tps
+            elseif vx < 0
+                vx += PLAYER_DECELERATION / config.tps
+            end
+            if vz > 0
+                vz -= PLAYER_DECELERATION / config.tps
+            elseif vz < 0
+                vz += PLAYER_DECELERATION / config.tps
+            end
+
+            if abs(vx) < PLAYER_DECELERATION / config.tps * 0.51
+                vx = 0
+            end
+            if abs(vz) < PLAYER_DECELERATION / config.tps * 0.51
+                vz = 0
+            end
+
+            px += vx / config.tps
+            pz += vz / config.tps
 
 
             # Break and place blocks.
@@ -147,19 +237,20 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                 SDL_ShowCursor(SDL_ENABLE)
             end
 
+
             # Render:
 
             if tick_should_render()
                 # Make the sky a bit darker if you're looking down.
                 if θv < 0
-                    SDL_SetRenderDrawColor(renderer, 180, 190, 255, 255)
+                    SDL_SetRenderDrawColor(renderer, 150, 215, 255, 255)
                 else
-                    SDL_SetRenderDrawColor(renderer, 150, 160, 240, 255)
+                    SDL_SetRenderDrawColor(renderer, 140, 205, 245, 255)
                 end
 
                 SDL_RenderClear(renderer)
 
-                looking_at = draw_world(renderer, world, px, py, pz, θv, θh)
+                looking_at = draw_world(renderer, world, px, py + p_head, pz, θv, θh)
                 
                 is_hovering = false
                 if looking_at != ()
