@@ -1,0 +1,4 @@
+display_size=1280x720
+#display_size=1920x1080
+tps=100
+fps=60
