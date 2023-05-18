@@ -125,15 +125,6 @@ end
 Returns whether the shape was successfully drawn."""
 function draw_solid_convex_quad(renderer::Ptr{SDL_Renderer}, corners::Array{Tuple{Int, Int}})::Bool
 
-    # Exit early if the whole shape is off screen.
-    if maximum(map(first, corners)) > draw_screen_size[1] &&
-        maximum(map(last, corners)) > draw_screen_size[2] &&
-        minimum(map(first, corners)) < 0 &&
-        minimum(map(last, corners)) < 0
-        return false
-    end 
-
-
     # Slightly cursed optimisation: the algorithm works by drawing each row, but sometimes it's
     # efficient to draw each column. Instead of rewriting the algorithm and rewriting all the
     # comments explaining everything, we could just swap x and y temporarily, so it thinks it's
@@ -220,7 +211,7 @@ function draw_solid_convex_quad(renderer::Ptr{SDL_Renderer}, corners::Array{Tupl
     end
 
 
-    trap_shape = !split_by_line((top, bottom), left, right)
+    trap_shape = !split_by_line((top, bottom), left, right) || top == op || bottom == ottom
 
         # The drawing algorithm draws lots of horizontal lines to make up the whole shape.
         # It has a "left track" and a "right track" to draw horizontal lines between, the left track
@@ -405,7 +396,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
                     is_hovering = true
                     selected_box = (tbx, tby, tbz)
                     facing_box = (tbx, tby - 1, tbz)
-                    draw_dbg_info["selected_face"] = (selected_box, "bottom", [translated_vertices[1], translated_vertices[2], translated_vertices[5], translated_vertices[6]])
+                    draw_dbg_info["selected_face"] = "bottom"
+                    draw_dbg_info["selected_face_rendering_location"] = [translated_vertices[1], translated_vertices[2], translated_vertices[5], translated_vertices[6]]
                 end
             end
         end
@@ -420,7 +412,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
                     is_hovering = true
                     selected_box = (tbx, tby, tbz)
                     facing_box = (tbx, tby + 1, tbz)
-                    draw_dbg_info["selected_face"] = (selected_box, "top", [translated_vertices[3], translated_vertices[4], translated_vertices[7], translated_vertices[8]])
+                    draw_dbg_info["selected_face"] = "top"
+                    draw_dbg_info["selected_face_rendering_location"] = [translated_vertices[3], translated_vertices[4], translated_vertices[7], translated_vertices[8]]
                 end
             end
         end
@@ -435,7 +428,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
                     is_hovering = true
                     selected_box = (tbx, tby, tbz)
                     facing_box = (tbx - 1, tby, tbz)
-                    draw_dbg_info["selected_face"] = (selected_box, "left", [translated_vertices[1], translated_vertices[3], translated_vertices[7], translated_vertices[5]])
+                    draw_dbg_info["selected_face"] = "left"
+                    draw_dbg_info["selected_face_rendering_location"] = [translated_vertices[1], translated_vertices[3], translated_vertices[7], translated_vertices[5]]
                 end
             end
         end
@@ -449,7 +443,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
                     is_hovering = true
                     selected_box = (tbx, tby, tbz)
                     facing_box = (tbx + 1, tby, tbz)
-                    draw_dbg_info["selected_face"] = (selected_box, "right", [translated_vertices[2], translated_vertices[4], translated_vertices[8], translated_vertices[6]])
+                    draw_dbg_info["selected_face"] = "right"
+                    draw_dbg_info["selected_face_rendering_location"] = [translated_vertices[2], translated_vertices[4], translated_vertices[8], translated_vertices[6]]
                 end
             end
         end
@@ -464,7 +459,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
                     is_hovering = true
                     selected_box = (tbx, tby, tbz)
                     facing_box = (tbx, tby, tbz - 1)
-                    draw_dbg_info["selected_face"] = (selected_box, "front", [translated_vertices[1], translated_vertices[2], translated_vertices[4], translated_vertices[3]])
+                    draw_dbg_info["selected_face"] = "front"
+                    draw_dbg_info["selected_face_rendering_location"] = [translated_vertices[1], translated_vertices[2], translated_vertices[4], translated_vertices[3]]
                 end
             end
         end
@@ -478,7 +474,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
                     is_hovering = true
                     selected_box = (tbx, tby, tbz)
                     facing_box = (tbx, tby, tbz + 1)
-                    draw_dbg_info["selected_face"] = (selected_box, "back", [translated_vertices[5], translated_vertices[6], translated_vertices[8], translated_vertices[7]])
+                    draw_dbg_info["selected_face"] = "back"
+                    draw_dbg_info["selected_face_rendering_location"] = [translated_vertices[5], translated_vertices[6], translated_vertices[8], translated_vertices[7]]
                 end
             end
         end

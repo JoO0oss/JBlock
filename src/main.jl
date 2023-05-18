@@ -26,7 +26,6 @@ SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16)
 
 
 main_window = SDL_CreateWindow(main_config.title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, main_config.width, main_config.height, SDL_WINDOW_SHOWN)
-SDL_SetWindowResizable(main_window, SDL_TRUE)
 
 icon = IMG_Load("assets/icon.png")
 SDL_SetWindowIcon(main_window, icon)
