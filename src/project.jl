@@ -1,7 +1,7 @@
 project_centre = 0, 0
 project_scale = 1.0
 
-PROJECTION_Z_EPSILON = 0.2
+PROJECTION_Z_EPSILON = 0.1
 
 """ An integral 3D point. """
 IntPoint = Tuple{Int, Int, Int}
@@ -11,11 +11,11 @@ RealPoint = Tuple{Real, Real, Real}
 CameraPoint = Tuple{Real, Real, Real, Real, Real}
 
 """ Initialise the projection system, given the screen width and height. """
-function project_init(screen_width::Int, screen_height::Int)
+function project_init(screen_width::Int, screen_height::Int, fov_scale::Float64=1.0)
     global project_centre, project_scale
 
     project_centre = screen_width ÷ 2, screen_height ÷ 2
-    project_scale = 0.5*√(screen_width * screen_height)  # Geometric mean of the two dimensions.
+    project_scale = fov_scale*√(screen_width * screen_height)  # Geometric mean of the two dimensions.
 end
 
 """ Project a 3D point onto 2D space. Point is of the form `(x, y, z)`, camera is of the form `(x, y,
@@ -61,9 +61,9 @@ end
 """ Translate a point centered on `(0, 0)` where 1 is 1 world unit to a pixel centered on the middle
 of the screen where 1 is a pixel - and ~600 is one world unit, or whatever `project_scale` is set to
 by `project_init()`. """
-function project_translate(point::Tuple{Real, Real}, fov_scale::Float64=2.0)::Tuple{Int, Int}
+function project_translate(point::Tuple{Real, Real})::Tuple{Int, Int}
     # Flip the y axis because the TOP of the screen is y0, the bottom of the screen is y~600.
-    x, y = point .* (1, -1) .* (project_scale * fov_scale) .+ project_centre
+    x, y = point .* (1, -1) .* (project_scale) .+ project_centre
     return round(x), round(y)
 end
 

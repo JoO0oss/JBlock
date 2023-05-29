@@ -132,7 +132,7 @@ function draw_solid_convex_quad(renderer::Ptr{SDL_Renderer}, corners::Array{Tupl
     width = maximum(map(first, corners)) - minimum(map(first, corners))
     height = maximum(map(last, corners)) - minimum(map(last, corners))
 
-    if width > 10000 || height > 10000
+    if width > 4*draw_screen_size[1] || height > 4*draw_screen_size[2]
         return false
     end
 
