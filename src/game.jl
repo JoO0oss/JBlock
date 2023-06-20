@@ -53,25 +53,11 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
     θv = -1.4  # Start looking down.
     θh = 0.0
 
-    # Player width and height. (px, py, pz) refers to the bottom of the hitbox in the centre.
-    pw = 0.5
-    ph = 1.8
     p_head = 1.7  # The height of the player's head.
-    pϵ = 0.1  # The gap within which to detect collisions.
-    p_collision_offset = 0.01  # The offset to use when adjusting position as part of a collision.
 
     vx = 0.0
     vy = 0.0
     vz = 0.0
-
-    is_vertically_supported = false
-    crawling = false
-
-    p_height_full = 1.8
-    p_height_crawl = 0.9
-    p_hd_full = 1.7  # The height of the player's head when standing.
-    p_hd_crawl = 0.8  # The height of the player's head when crawling.
-
 
     is_hovering = false
     selected_box = (0, 0, 0)  # The block that would be broken upon left click.
@@ -86,69 +72,6 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
     paused = false
     paused_key = false
     dbg_key = false
-
-    """ Convenience function for checking if a 3d point is inside a filled block. """
-    function is_filled(x::Float64, y::Float64, z::Float64)
-        xi = floor(Int, x)
-        yi = floor(Int, y)
-        zi = floor(Int, z)
-
-        if xi <= 0 || yi <= 0 || zi <= 0 || xi > SPACE_WIDTH || yi > SPACE_HEIGHT || zi > SPACE_DEPTH
-            return false
-        end
-        return world[xi, yi, zi].type != block_type.Air
-    end
-
-
-
-    """ Convenience function to check if any of the player is colliding downwards into a block. """
-    function is_colliding_bottom(x::Float64, y::Float64, z::Float64)
-            return is_filled(x - pw/2 + pϵ, y, z - pw/2 + pϵ) ||
-                    is_filled(x + pw/2 - pϵ, y, z - pw/2 + pϵ) ||
-                    is_filled(x - pw/2 + pϵ, y, z + pw/2 - pϵ) ||
-                    is_filled(x + pw/2 - pϵ, y, z + pw/2 - pϵ)
-    end
-
-    """ Convenience function to check if any of the player is colliding upwards into a block. """
-    function is_colliding_top(x::Float64, y::Float64, z::Float64)
-            return is_filled(x - pw/2 + pϵ, y + ph, z - pw/2 + pϵ) ||
-                    is_filled(x + pw/2 - pϵ, y + ph, z - pw/2 + pϵ) ||
-                    is_filled(x - pw/2 + pϵ, y + ph, z + pw/2 - pϵ) ||
-                    is_filled(x + pw/2 - pϵ, y + ph, z + pw/2 - pϵ)
-    end
-
-    """ Convenience function to check if any of the player is colliding left into a block. """
-    function is_colliding_left(x::Float64, y::Float64, z::Float64)
-            return is_filled(x - pw/2, y + pϵ, z - pw/2 + pϵ) ||
-                    is_filled(x - pw/2, y + pϵ, z + pw/2 - pϵ) ||
-                    is_filled(x - pw/2, y + ph - pϵ, z - pw/2 + pϵ) ||
-                    is_filled(x - pw/2, y + ph - pϵ, z + pw/2 - pϵ)
-    end
-
-    """ Convenience function to check if any of the player is colliding right into a block. """
-    function is_colliding_right(x::Float64, y::Float64, z::Float64)
-            return is_filled(x + pw/2, y + pϵ, z - pw/2 + pϵ) ||
-                    is_filled(x + pw/2, y + pϵ, z + pw/2 - pϵ) ||
-                    is_filled(x + pw/2, y + ph - pϵ, z - pw/2 + pϵ) ||
-                    is_filled(x + pw/2, y + ph - pϵ, z + pw/2 - pϵ)
-    end
-
-    """ Convenience function to check if any of the player is colliding forwards into a block. """
-    function is_colliding_front(x::Float64, y::Float64, z::Float64)
-            return is_filled(x - pw/2 + pϵ, y + pϵ, z - pw/2) ||
-                    is_filled(x + pw/2 - pϵ, y + pϵ, z - pw/2) ||
-                    is_filled(x - pw/2 + pϵ, y + ph - pϵ, z - pw/2) ||
-                    is_filled(x + pw/2 - pϵ, y + ph - pϵ, z - pw/2)
-    end
-
-    """ Convenience function to check if any of the player is colliding backwards into a block. """
-    function is_colliding_back(x::Float64, y::Float64, z::Float64)
-            return is_filled(x - pw/2 + pϵ, y + pϵ, z + pw/2) ||
-                    is_filled(x + pw/2 - pϵ, y + pϵ, z + pw/2) ||
-                    is_filled(x - pw/2 + pϵ, y + ph - pϵ, z + pw/2) ||
-                    is_filled(x + pw/2 - pϵ, y + ph - pϵ, z + pw/2)
-    end
-
 
     try
         run = true
@@ -177,6 +100,7 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
             # These aren't for inertia in the typical sense, they're more for smoothness player movement.
             v_forwards = 0.0
             v_rightwards = 0.0
+            v_upwards = 0.0
 
             if keyboard_read(KEYS_W)
                 v_forwards += PLAYER_SPEED
@@ -195,19 +119,11 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                 v_rightwards += PLAYER_SPEED
             end
             if keyboard_read(KEYS_SPACE)
-                if is_vertically_supported
-                    vy += JUMP_VELOCITY
-                end
+                v_upwards += PLAYER_SPEED
             end
             
             if keyboard_read(KEYS_LSHIFT)
-                crawling = true
-                ph = p_height_crawl
-                p_head = p_hd_crawl
-            else
-                crawling = false
-                ph = p_height_full
-                p_head = p_hd_full
+                v_upwards -= PLAYER_SPEED
             end
 
             if keyboard_read(KEYS_F3)
@@ -235,7 +151,6 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                     println("velocity: ", round(vx, sigdigits=3), ", ", round(vy, sigdigits=3), ", ", round(vz, sigdigits=3))
                     println("(θh, θv) : (", round(θh, sigdigits=3), ", ", round(θv, sigdigits=3), ")")
                     println("(v_forwards, v_rightwards): (", round(v_forwards, sigdigits=3), ", ", round(v_rightwards, sigdigits=3), ")")
-                    println("is_vertically_supported: $is_vertically_supported")
                     println("crawling: $crawling")
 
                     println("==================\n")
@@ -272,30 +187,21 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
 
 
 
-            # Physics:
-            
-            is_vertically_supported = vy <= 0 && (
-                                        is_filled(px - pw/2, py-pϵ, pz - pw/2) ||
-                                        is_filled(px + pw/2, py-pϵ, pz - pw/2) ||
-                                        is_filled(px - pw/2, py-pϵ, pz + pw/2) ||
-                                        is_filled(px + pw/2, py-pϵ, pz + pw/2) )
-
-
-            if !is_vertically_supported
-                vy -= GRAVITY * tick_previous_delta()
-            else
-                vy = max(vy, 0)
-            end
-
+            # Smooth the player's movement.
 
             target_vz = -cos(θh) * v_forwards + sin(θh) * v_rightwards
             target_vx = sin(θh) * v_forwards + cos(θh) * v_rightwards
 
+            target_vy = v_upwards
+
             game_dbg_info["target_vx"] = target_vx
+            game_dbg_info["target_vy"] = target_vy
             game_dbg_info["target_vz"] = target_vz
 
             Δvx = (target_vx - vx) * tick_previous_delta()
+            Δvy = (target_vy - vy) * tick_previous_delta()
             Δvz = (target_vz - vz) * tick_previous_delta()
+            
 
             # Normalise Δv.
             Δv_length = sqrt(Δvx^2 + Δvz^2)
@@ -303,8 +209,11 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                 Δvx /= Δv_length
                 Δvz /= Δv_length
             end
+            # "Normalise" vy as well here (ie so it's in the same -1 to 1 range as Δvx and Δvz).
+            Δvy = sign(Δvy)
 
             Δvx *= PLAYER_ACCELERATION
+            Δvy *= PLAYER_ACCELERATION
             Δvz *= PLAYER_ACCELERATION
 
             # If vx + Δvx would overshoot...
@@ -313,65 +222,22 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
             else
                 vx += Δvx
             end
+            # vy + Δvy
+            if (vy <= target_vy && vy + Δvy > target_vy) || (vy >= target_vy && vy + Δvy < target_vy)
+                vy = target_vy
+            else
+                vy += Δvy
+            end
+            # vz + Δvz
             if (vz < target_vz && vz + Δvz > target_vz) || (vz > target_vz && vz + Δvz < target_vz)
                 vz = target_vz
             else
                 vz += Δvz
             end
 
-            # Abbreviate v_ * tick_previous_delta() to Δ_ for the 6 if statements below.
-            Δx = vx * tick_previous_delta()
-            Δy = vy * tick_previous_delta()
-            Δz = vz * tick_previous_delta()
-
-
-            # Set vx, vy, vz to 0 if the player is about to bump into something.
-
-            # if (your_position + your_velocity) makes you hit a wall but (your_position) doesn't...
-            if is_colliding_bottom(px + Δx, py + Δy, pz + Δz) && !is_colliding_bottom(px, py + Δy, pz)
-                # max() is here so you don't just get stuck with vx = 0 when you enter the zone specified with is_colliding(...) above.
-                println("left bump")
-                vy = max(vy, 0)
-                Δy = max(Δy, 0)
-                py = floor(py) + p_collision_offset
-            end
-            if is_colliding_top(px + Δx, py + Δy, pz + Δz) && !is_colliding_top(px, py + Δy, pz)
-                vy = min(vy, 0)
-                Δy = min(Δy, 0)
-                py = ceil(py + ph) - ph - p_collision_offset
-            end
-            if is_colliding_left(px + Δx, py + Δy, pz + Δz) && !is_colliding_left(px, py + Δy, pz + Δz)
-                vx = max(vx, 0)
-                Δx = max(Δx, 0)
-                # Evaluate floor(left_hand_side_of_player) to get the position of the wall.
-                px = floor(px - pw/2) + pw/2 + p_collision_offset
-            end
-            if is_colliding_right(px + Δx, py + Δy, pz + Δz) && !is_colliding_right(px, py + Δy, pz + Δz)
-                vx = min(vx, 0)
-                Δx = min(Δx, 0)
-                px = ceil(px + pw/2) - pw/2 - p_collision_offset
-            end
-            if is_colliding_front(px + Δx, py + Δy, pz + Δz) && !is_colliding_front(pz, py + Δy, pz)
-                vz = max(vz, 0)
-                Δz = max(Δz, 0)
-                pz = floor(pz - pw/2) + pw/2 + p_collision_offset
-            end
-            if is_colliding_back(px + Δx, py + Δy, pz + Δz) && !is_colliding_back(pz, py + Δy, pz)
-                vz = min(vz, 0)
-                Δz = min(Δz, 0)
-                pz = ceil(pz + pw/2) - pw/2 - p_collision_offset
-            end
-            
-            """
-            println(is_filled(px - pw/2, py + pϵ, pz - pw/2 + pϵ))
-            println(is_filled(px - pw/2, py + pϵ, pz + pw/2 - pϵ))
-            println(is_filled(px - pw/2, py + ph - pϵ, pz - pw/2 + pϵ))
-            println(is_filled(px - pw/2, py + ph - pϵ, pz + pw/2 - pϵ))
-            println()"""
-
-            px += Δx
-            py += Δy
-            pz += Δz
+            px += vx * tick_previous_delta()
+            py += vy * tick_previous_delta()
+            pz += vz * tick_previous_delta()
 
 
             # Break and place blocks.
@@ -382,7 +248,7 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
 
                 if mouse_get_right_pressed()
                     if 1 <= facing_box[1] <= SPACE_WIDTH && 1 <= facing_box[2] <= SPACE_HEIGHT && 1 <= facing_box[3] <= SPACE_DEPTH
-                        world[facing_box...] = Block(block_type.Dirt)
+                        world[facing_box...] = Block(block_type.WoodPlank)
                     end
                 end
             end
