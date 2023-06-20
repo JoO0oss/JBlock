@@ -32,6 +32,7 @@ SDL_SetWindowIcon(main_window, icon)
 SDL_FreeSurface(icon)
 
 main_renderer = SDL_CreateRenderer(main_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
+SDL_SetRenderDrawBlendMode(main_renderer, SDL_BLENDMODE_BLEND)
 
 game_play(main_renderer, main_window, main_config)
 

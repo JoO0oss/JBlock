@@ -335,6 +335,7 @@ the block that would be placed) in the form `(looking_at, placable)`.
 If the player is not looking at any blocks, returns an emtpy tuple."""
 function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Float64, py::Float64, pz::Float64, θv::Float64, θh::Float64)::Union{Tuple{Tuple{Int, Int, Int}, Tuple{Int, Int, Int}}, Tuple{}}
 
+    # TODO: I think clamp(px_i, 1, draw_world_width) does this a lot better.
     px_i = min(max( Int(floor(px)) , 1), draw_world_width)  # px Integer.
     py_i = min(max( Int(floor(py)) , 1), draw_world_height)
     pz_i = min(max( Int(floor(pz)) , 1), draw_world_depth)
@@ -350,9 +351,9 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
     dbg_face_count = 0  # Count of how many quadrilaterals have been drawn.
     
     # Convenience function to help check if neighbouring blocks are air (to see if faces should be rendered).
-    function is_air(x, y, z)
+    function is_transparent(x, y, z)
         if 1 <= x <= draw_world_width && 1 <= y <= draw_world_height && 1 <= z <= draw_world_depth
-            return world[x, y, z].type == block_type.Air
+            return block_colours[world[x, y, z].type][4] != 255
         else
             return true
         end
@@ -360,7 +361,7 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
 
     for tbx = x_iter, tby = y_iter, tbz = z_iter
         # Don't render invisible blocks.
-        if world[tbx, tby, tbz].type == block_type.Air
+        if block_colours[world[tbx, tby, tbz].type][4] == 0  # (Test that block alpha is 0.)
             continue
         end
 
@@ -377,17 +378,21 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
 
         translated_vertices = map(project_translate, projected_vertices)
 
-        
+
         colour_mod = ((((tbx + 2*tby + 4*tbz) ^ 2) % 7) % 20) - 10
 
-        block_colour = block_colours[world[tbx, tby, tbz].type]
+        block_colour_alpha = block_colours[world[tbx, tby, tbz].type]
+
+        block_colour = block_colour_alpha[1:3]
+        block_alpha = block_colour_alpha[4]
+
         block_colour_ll = block_colour .+ 15 .+ colour_mod
         block_colour_l = block_colour .+ 5 .+ colour_mod
         block_colour_d = block_colour .- 5 .+ colour_mod
         block_colour_dd = block_colour .- 15 .+ colour_mod
 
-        SDL_SetRenderDrawColor(renderer, block_colour_dd..., 255)
-        if py < tby && is_air(tbx, tby - 1, tbz)
+        SDL_SetRenderDrawColor(renderer, block_colour_dd..., block_alpha)
+        if py < tby && is_transparent(tbx, tby - 1, tbz)
             # Colour in the "bottom" face.
             if draw_solid_convex_quad(renderer, [translated_vertices[1], translated_vertices[2], translated_vertices[5], translated_vertices[6]])
                 dbg_face_count += 1
@@ -402,8 +407,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
             end
         end
         
-        SDL_SetRenderDrawColor(renderer, block_colour_ll..., 255)
-        if py > tby + 1 && is_air(tbx, tby + 1, tbz)
+        SDL_SetRenderDrawColor(renderer, block_colour_ll..., block_alpha)
+        if py > tby + 1 && is_transparent(tbx, tby + 1, tbz)
             # Top.
             if draw_solid_convex_quad(renderer, [translated_vertices[3], translated_vertices[4], translated_vertices[7], translated_vertices[8]])
                 dbg_face_count += 1
@@ -418,8 +423,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
             end
         end
 
-        SDL_SetRenderDrawColor(renderer, block_colour_l..., 255)
-        if px < tbx && is_air(tbx - 1, tby, tbz)
+        SDL_SetRenderDrawColor(renderer, block_colour_l..., block_alpha)
+        if px < tbx && is_transparent(tbx - 1, tby, tbz)
             # Left.
             if draw_solid_convex_quad(renderer, [translated_vertices[1], translated_vertices[3], translated_vertices[7], translated_vertices[5]])
                 dbg_face_count += 1
@@ -434,7 +439,7 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
             end
         end
 
-        if px > tbx + 1 && is_air(tbx + 1, tby, tbz)
+        if px > tbx + 1 && is_transparent(tbx + 1, tby, tbz)
             # Right.
             if draw_solid_convex_quad(renderer, [translated_vertices[2], translated_vertices[4], translated_vertices[8], translated_vertices[6]])
                 dbg_face_count += 1
@@ -449,8 +454,8 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
             end
         end
 
-        SDL_SetRenderDrawColor(renderer, block_colour_d..., 255)
-        if pz < tbz && is_air(tbx, tby, tbz - 1)
+        SDL_SetRenderDrawColor(renderer, block_colour_d..., block_alpha)
+        if pz < tbz && is_transparent(tbx, tby, tbz - 1)
             # Front.
             if draw_solid_convex_quad(renderer, [translated_vertices[1], translated_vertices[2], translated_vertices[4], translated_vertices[3]])
                 dbg_face_count += 1
@@ -465,7 +470,7 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
             end
         end
 
-        if pz > tbz + 1 && is_air(tbx, tby, tbz + 1)
+        if pz > tbz + 1 && is_transparent(tbx, tby, tbz + 1)
             # Back.
             if draw_solid_convex_quad(renderer, [translated_vertices[5], translated_vertices[6], translated_vertices[8], translated_vertices[7]])
                 dbg_face_count += 1

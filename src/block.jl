@@ -57,12 +57,14 @@ end
 
 # Make sure these are all at least 25 and no more than 230, it wouldn't be difficult to add error
 # checking where necessary, but it makes the code a whole lot less readable.
-block_colours = Dict{block_type.BlockType, Tuple{UInt8, UInt8, UInt8}}(block_type.Air => (0, 0, 0),
-    block_type.Stone => (128, 128, 128),
-    block_type.Grass => (40, 200, 40),
-    block_type.Dirt => (85, 55, 35),
-    block_type.WoodPlank => (128, 64, 25)
-    )
+block_colours = Dict{block_type.BlockType, Tuple{UInt8, UInt8, UInt8, UInt8}}(
+    block_type.Air => (0, 0, 0, 0),
+    block_type.Stone => (128, 128, 128, 255),
+    block_type.Grass => (40, 200, 40, 255),
+    block_type.Dirt => (85, 55, 35, 255),
+    block_type.WoodPlank => (128, 64, 25, 255),
+    block_type.Glass => (150, 220, 220, 150)
+)
 
 struct Block
     type::block_type.BlockType

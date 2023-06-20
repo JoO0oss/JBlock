@@ -248,7 +248,7 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
 
                 if mouse_get_right_pressed()
                     if 1 <= facing_box[1] <= SPACE_WIDTH && 1 <= facing_box[2] <= SPACE_HEIGHT && 1 <= facing_box[3] <= SPACE_DEPTH
-                        world[facing_box...] = Block(block_type.WoodPlank)
+                        world[facing_box...] = Block(block_type.Glass)
                     end
                 end
             end
