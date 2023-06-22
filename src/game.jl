@@ -59,6 +59,8 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
     vy = 0.0
     vz = 0.0
 
+    inventory = block_type.Stone  # What the player's "holding".
+
     is_hovering = false
     selected_box = (0, 0, 0)  # The block that would be broken upon left click.
     facing_box = (0, 0, 0)  # The block that would be placed upon right click.
@@ -124,6 +126,22 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
             
             if keyboard_read(KEYS_LSHIFT)
                 v_upwards -= PLAYER_SPEED
+            end
+
+            if keyboard_read(KEYS_1)
+                inventory = block_type.Stone
+            end
+            if keyboard_read(KEYS_2)
+                inventory = block_type.Dirt
+            end
+            if keyboard_read(KEYS_3)
+                inventory = block_type.Grass
+            end
+            if keyboard_read(KEYS_4)
+                inventory = block_type.WoodPlank
+            end
+            if keyboard_read(KEYS_5)
+                inventory = block_type.Glass
             end
 
             if keyboard_read(KEYS_F3)
@@ -246,9 +264,13 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                     world[selected_box...] = Block(block_type.Air)
                 end
 
+                if mouse_get_middle_pressed()
+                    inventory = world[selected_box...].type
+                end
+
                 if mouse_get_right_pressed()
                     if 1 <= facing_box[1] <= SPACE_WIDTH && 1 <= facing_box[2] <= SPACE_HEIGHT && 1 <= facing_box[3] <= SPACE_DEPTH
-                        world[facing_box...] = Block(block_type.Glass)
+                        world[facing_box...] = Block(inventory)
                     end
                 end
             end
@@ -263,20 +285,40 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                 else
                     SDL_SetRenderDrawColor(renderer, 140, 205, 245, 255)
                 end
-
+                
+                # Sky.
                 SDL_RenderClear(renderer)
 
+                # All the blocks.
                 looking_at = draw_world(renderer, world, px, py + p_head, pz, θv, θh)
                 
+                # Wireframe (if looking at block).
                 is_hovering = false
                 if looking_at != ()
                     is_hovering = true
                     selected_box, facing_box = looking_at
                 end
 
+                # Crosshair.
                 SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
                 draw_cross(renderer, (config.width ÷ 2, config.height ÷ 2))
                 
+                # "Inventory".
+                block_colour_alpha = block_colours[inventory]
+                block_colour = block_colour_alpha[1:3]
+                block_alpha = block_colour_alpha[4] ÷ 2  # Draw this gui element transparent.
+                block_colour_ll = block_colour .+ 15
+                block_colour_l = block_colour .+ 5
+                block_colour_d = block_colour .- 5
+
+                SDL_SetRenderDrawColor(renderer, block_colour_ll..., block_alpha)  # Top.
+                draw_solid_convex_quad(renderer, [(40, 10), (20, 20), (60, 20), (40, 30)])
+
+                SDL_SetRenderDrawColor(renderer, block_colour_l..., block_alpha)  # Left.
+                draw_solid_convex_quad(renderer, [(20, 21), (40, 31), (20, 45), (40, 55)])
+
+                SDL_SetRenderDrawColor(renderer, block_colour_d..., block_alpha)  # Right (front).
+                draw_solid_convex_quad(renderer, [(41, 31), (60, 21), (41, 55), (60, 45)])
 
                 SDL_RenderPresent(renderer)
             end

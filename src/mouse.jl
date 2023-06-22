@@ -3,6 +3,8 @@
 # Use these to work out if the mouse has been clicked or released.
 mouse_left_down = false
 mouse_left_down_prev = false
+mouse_middle_down = false
+mouse_middle_down_prev = false
 mouse_right_down = false
 mouse_right_down_prev = false
 
@@ -13,6 +15,8 @@ mouse_location = (0, 0)
 function mouse_update()
     global mouse_left_down
     global mouse_left_down_prev
+    global mouse_middle_down
+    global mouse_middle_down_prev
     global mouse_right_down
     global mouse_right_down_prev
     
@@ -30,6 +34,13 @@ function mouse_update()
         mouse_left_down = true
     else
         mouse_left_down = false
+    end
+
+    mouse_middle_down_prev = mouse_middle_down
+    if mouse_button_state & SDL_BUTTON_MMASK > 0
+        mouse_middle_down = true
+    else
+        mouse_middle_down = false
     end
 
     mouse_right_down_prev = mouse_right_down
@@ -59,6 +70,16 @@ end
 """ Get whether the left mouse button has just been released. """
 function mouse_get_left_released()
     return mouse_left_down_prev && !mouse_left_down
+end
+
+""" Get whether the middle mouse button has just been pressed. """
+function mouse_get_middle_pressed()
+    return mouse_middle_down && !mouse_middle_down_prev
+end
+
+""" Get whether the middle mouse button has just been released. """
+function mouse_get_middle_released()
+    return mouse_middle_down_prev && !mouse_middle_down
 end
 
 """ Get whether the right mouse button has just been pressed. """
