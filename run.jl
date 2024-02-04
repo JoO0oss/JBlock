@@ -1,8 +1,8 @@
 # OS Agnostic entry point with `julia` command.
-if Sys.islinux()
-    run(`chmod +x run.sh`)
-    run(`./run.sh`)
-else
+if Sys.iswindows()
     cd("src")
     run(`julia main.jl`)
+else
+    run(`chmod +x run.sh`)
+    run(`./run.sh`)
 end

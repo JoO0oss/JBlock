@@ -11,7 +11,7 @@ Import("configurer.jl")
 Import("game.jl")
 
 # Check if LD_PRELOAD exists/is correct, use shortcircuting to avoid error
-if !("LD_PRELOAD" in keys(ENV)) || ENV["LD_PRELOAD"] != "/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
+if !(Sys.iswindows() || "LD_PRELOAD" in keys(ENV)) || ENV["LD_PRELOAD"] != "/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
     println("WARNING: LD_PRELOAD is not set, this may cause issues with SDL2.")
     println("Please run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6` before running this script.")
     exit()
