@@ -55,6 +55,7 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
 
     p_head = 1.7  # The height of the player's head.
 
+    # Calculated with v_forwards, v_rightwards, and θh.
     vx = 0.0
     vy = 0.0
     vz = 0.0
@@ -279,7 +280,7 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
             # Render:
 
             if tick_should_render()
-                # Make the sky a bit darker if you're looking down.
+                # Make the sky a bit darker if you're looking up.
                 if θv < 0
                     SDL_SetRenderDrawColor(renderer, 150, 215, 255, 255)
                 else
