@@ -170,8 +170,6 @@ function game_play(renderer::Ptr{SDL_Renderer}, window::Ptr{SDL_Window}, config:
                     println("velocity: ", round(vx, sigdigits=3), ", ", round(vy, sigdigits=3), ", ", round(vz, sigdigits=3))
                     println("(θh, θv) : (", round(θh, sigdigits=3), ", ", round(θv, sigdigits=3), ")")
                     println("(v_forwards, v_rightwards): (", round(v_forwards, sigdigits=3), ", ", round(v_rightwards, sigdigits=3), ")")
-                    println("crawling: $crawling")
-
                     println("==================\n")
                 end
                 dbg_key = false
