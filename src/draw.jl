@@ -336,7 +336,7 @@ If the player is not looking at any blocks, returns an emtpy tuple."""
 function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Float64, py::Float64, pz::Float64, θv::Float64, θh::Float64)::Union{Tuple{Tuple{Int, Int, Int}, Tuple{Int, Int, Int}}, Tuple{}}
 
     # TODO: I think clamp(px_i, 1, draw_world_width) does this a lot better.
-    px_i = min(max( Int(floor(px)) , 1), draw_world_width)  # px Integer.
+    px_i = min(max( Int(floor(px)) , 1), draw_world_width)  # px_i means 'Player X Integer'.
     py_i = min(max( Int(floor(py)) , 1), draw_world_height)
     pz_i = min(max( Int(floor(pz)) , 1), draw_world_depth)
 
@@ -360,14 +360,15 @@ function draw_world(renderer::Ptr{SDL_Renderer}, world::Array{Block, 3}, px::Flo
     end
 
     for tbx = x_iter, tby = y_iter, tbz = z_iter
-        # Don't render invisible blocks.
-        if block_colours[world[tbx, tby, tbz].type][4] == 0  # (Test that block alpha is 0.)
+        # Don't render invisible blocks, i.e. skip if block alpha == 0.
+        if block_colours[world[tbx, tby, tbz].type][4] == 0
             continue
         end
 
-        cube_arr = project_tocube((tbx, tby, tbz))  # Turn the block into an array of 8 vertices in 3D space.
+        cube_arr = project_tocube((tbx, tby, tbz))  # Store the block as an array of 8 vertices in 3D space.
         camera = (px, py, pz, θv, θh)
 
+        # Heavy lifting done here with project_project(...).
         projected_vertices_with_z = [project_project(point, camera) for point in cube_arr]
         projected_vertices = [(x, y) for (x, y, _) in projected_vertices_with_z]
 
